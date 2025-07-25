@@ -64,7 +64,6 @@ class MCPEchoServer:
         """Create the Starlette application."""
         routes = [
             Route("/mcp", self.handle_mcp_request, methods=["POST", "GET", "OPTIONS"]),
-            Route("/.well-known/oauth-protected-resource", self.handle_protected_resource_metadata, methods=["GET"]),
         ]
 
         return Starlette(debug=self.debug, routes=routes)
@@ -240,39 +239,6 @@ class MCPEchoServer:
         finally:
             # Clean up request context
             self._request_context.pop(task_id, None)
-
-    async def handle_protected_resource_metadata(self, request: Request):
-        """Handle OAuth 2.0 Protected Resource Metadata endpoint (RFC 9728)."""
-        # Get the resource URI (this server's URL)
-        # Per MCP spec: use the most specific URI possible
-        host = request.headers.get("host", "localhost")
-        proto = request.headers.get("x-forwarded-proto", "http")
-        resource_uri = f"{proto}://{host}/mcp"
-        
-        # Get auth server URL from environment or use default
-        auth_server = os.environ.get("MCP_AUTH_SERVER", f"{proto}://auth.{host.split('.', 1)[-1] if '.' in host else 'localhost'}")
-        
-        metadata = {
-            "resource": resource_uri,
-            "authorization_servers": [auth_server],
-            "jwks_uri": f"{auth_server}/jwks",
-            "scopes_supported": ["mcp:read", "mcp:write", "mcp:session"],
-            "bearer_methods_supported": ["header"],
-            "resource_documentation": f"{resource_uri}/docs",
-            "resource_signing_alg_values_supported": ["RS256"],
-            "resource_endpoints": [f"{resource_uri}/mcp"],
-            "mcp_versions_supported": self.supported_versions,
-            "mcp_server_info": {
-                "name": self.SERVER_NAME,
-                "version": self.SERVER_VERSION,
-                "stateless": True
-            }
-        }
-        
-        return JSONResponse(metadata, headers={
-            "Cache-Control": "max-age=3600",
-            "Content-Type": "application/json"
-        })
 
     def _validate_post_headers(self, request: Request) -> JSONResponse | None:
         """Validate required headers for POST requests."""
