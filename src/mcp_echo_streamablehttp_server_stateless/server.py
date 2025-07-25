@@ -244,9 +244,10 @@ class MCPEchoServer:
     async def handle_protected_resource_metadata(self, request: Request):
         """Handle OAuth 2.0 Protected Resource Metadata endpoint (RFC 9728)."""
         # Get the resource URI (this server's URL)
+        # Per MCP spec: use the most specific URI possible
         host = request.headers.get("host", "localhost")
         proto = request.headers.get("x-forwarded-proto", "http")
-        resource_uri = f"{proto}://{host}"
+        resource_uri = f"{proto}://{host}/mcp"
         
         # Get auth server URL from environment or use default
         auth_server = os.environ.get("MCP_AUTH_SERVER", f"{proto}://auth.{host.split('.', 1)[-1] if '.' in host else 'localhost'}")
